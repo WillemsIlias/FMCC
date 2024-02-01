@@ -1,9 +1,8 @@
 
 # Clear workspace
 rm(list = ls())
-
 # Load necessary packages, functions and data
-fulldata<-read.csv("HIP_data.csv") # The data collected by the HIP Breast Cancer Screening Trial is not freely available. It can be requested via the National Cancer Institute (NCI).
+fulldata <- read.csv("hiip_data_041515.csv")
 library(MASS)
 library(nloptr)
 library(numDeriv)
@@ -58,8 +57,8 @@ parlgamma=parl-1
 results<-DataApplication_cmprsk.Firth(data, init.value.theta_1, init.value.theta_2) 
 
 # Method using V=0 if W=0
-# parlgamma=parl-2
-# results<-DataApplication_cmprsk(data, init.value.theta_1, init.value.theta_2)
+parlgamma=parl-2
+results<-DataApplication_cmprsk.alternative(data, init.value.theta_1, init.value.theta_2)
 
 # results parametric estimation
 results.screened <- results[[1]]
@@ -68,7 +67,7 @@ results.control <- results[[3]]
 
 
 # Nonparametric estimator of CIF
-# datasub <- dataset[dataset$age_entry==50,]
+#datasub <- dataset[dataset$age_entry==50,]
 datasub<-dataset
 
 Y.sub = datasub$followup_days
@@ -94,21 +93,21 @@ results.control <- rbind(results.control, fit$est[1,], fit$est[4,])
 
 par(mfrow=c(1,2))
 # Death from breast cancer (C1)
-plot(c(0,results.screened[1,]),c(0,results.screened[2,]),type="l", lty=1, main="Cancer", col="grey80",xlab="Time",ylab="Probability",xlim=c(0,8000), ylim=c(0,0.02)) # two-step estimator
-lines(c(0,results.screened[1,]),c(0,results.screened[6,]), lty=1,type="l", col="grey80") # nonparametric estimator
+plot(c(0,results.screened[1,]),c(0,results.screened[2,]),type="l", lty=3, main="Cancer",xlab="Time",ylab="Probability",xlim=c(0,8000), ylim=c(0,0.02)) # two-step estimator
+lines(c(0,results.screened[1,]),c(0,results.screened[6,]), lty=3,type="l") # nonparametric estimator
 
-lines(c(0,results.screened[1,]),c(0,results.not_screened[2,]), lty=3,type="l", col="grey60")
-lines(c(0,results.screened[1,]),c(0,results.not_screened[6,]), lty=3,type="l", col="grey60")
+lines(c(0,results.screened[1,]),c(0,results.not_screened[2,]), lty=1,type="l", col="grey60")
+lines(c(0,results.screened[1,]),c(0,results.not_screened[6,]), lty=1,type="l", col="grey60")
 
 lines(c(0,results.screened[1,]),c(0,results.control[2,]), lty=1,type="l")
 lines(c(0,results.screened[1,]),c(0,results.control[6,]), lty=1,type="l")
 
 # Death from other causes (C2)
-plot(c(0,results.screened[1,]),c(0,results.screened[3,]),type="l", lty=1, main="Other cause", col="grey80",xlab="Time",ylab="Probability",xlim=c(0,8000), ylim=c(0,0.25))
-lines(c(0,results.screened[1,]),c(0,results.screened[7,]), lty=1,type="l", col="grey80")
+plot(c(0,results.screened[1,]),c(0,results.screened[3,]),type="l", lty=3, main="Other cause",xlab="Time",ylab="Probability",xlim=c(0,8000), ylim=c(0,0.25))
+lines(c(0,results.screened[1,]),c(0,results.screened[7,]), lty=3,type="l")
 
-lines(c(0,results.screened[1,]),c(0,results.not_screened[3,]), lty=3,type="l", col="grey60")
-lines(c(0,results.screened[1,]),c(0,results.not_screened[7,]), lty=3,type="l", col="grey60")
+lines(c(0,results.screened[1,]),c(0,results.not_screened[3,]), lty=1,type="l", col="grey60")
+lines(c(0,results.screened[1,]),c(0,results.not_screened[7,]), lty=1,type="l", col="grey60")
 
 lines(c(0,results.screened[1,]),c(0,results.control[3,]), lty=1,type="l")
 lines(c(0,results.screened[1,]),c(0,results.control[7,]), lty=1,type="l")
