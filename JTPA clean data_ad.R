@@ -228,31 +228,46 @@ head(datejobfu2_cleaned2)
 for(i in 1:nrow(data)){
   id <- data$recid[i]
   
-  # If the date is missing...
-  if(is.na(data$date[i])){
+  # If the for the time until employment is missing...
+  if (is.na(data$date[i])) {
     
-    # Check the observation attended the second interview
-    if (id %in% as.numeric(jtpapartfu2$recid)) {
+    # Check if the observation was invited to the second interview
+    if (id %in% as.numeric(headf2$recid)) {
       
-      # If so, check they had a job by the time of the second interview
-      if(id %in% datejobfu2_cleaned2$recid){
+      # If invited, check if the observation attended the second interview
+      if (id %in% as.numeric(jtpapartfu2$recid)) {
         
-        # If so, the time can be recorder precisely
-        data[i,c("date")] <- datejobfu2_cleaned2[datejobfu2_cleaned2$recid == id, c("date")]
-        data[i, "delta"] <- 1
-        data[i, "xi"] <- 0
+        # If they attended, check if they had a job by the time of the second
+        # interview
+        if (id %in% datejobfu2_cleaned2$recid) {
+         
+          # If so, the time can be recorder precisely
+          data[i,c("date")] <- datejobfu2_cleaned2[datejobfu2_cleaned2$recid == id, c("date")]
+          data[i, "delta"] <- 1
+          data[i, "xi"] <- 0
+          
+        } else {
+          
+          # If not, the observation is administratively censored
+          data[i, "delta"] <- 0
+          data[i, "xi"] <- 0
+        }
+        
       } else {
         
-        # If not, the observation is administratively censored
+        # If the observation did not attend the second interview but was invited
+        # to participate, they are dependently censored.
         data[i, "delta"] <- 0
-        data[i, "xi"] <- 0
+        data[i, "xi"] <- 1
       }
+      
     } else {
       
-      # If the observation did not attend the second interview, it is dependently
-      # censored
+      # If the subject was not invited to the second interview, they are
+      # administratively censored
       data[i, "delta"] <- 0
-      data[i, "xi"] <- 1
+      data[i, "xi"] <- 0
+      
     }
   }
 }

@@ -41,7 +41,7 @@ totparl <- 2*parl
 parlgamma <- parl-1
 n <- nrow(dataset)
 
-# Create data matrix of confounded variable. Z is the indicator whether the
+# Create data matrix of the confounded variable. Z is the indicator whether the
 # participant actually participated in the study. (0 for no participation,
 # 1 for participation). 
 Z <- as.matrix(dataset$jtpa)
@@ -58,7 +58,6 @@ namescoef <- c("beta_{T,0}","beta_{T,1}","beta_{T,2}",
                "alpha_C","lambda_C","sigma_T",
                "sigma_C","rho","theta_1","theta_2")
 
-
 # Fitting logistic regression model
 fit_log <- glm(Delta ~ X[,2] + X[,3], family = "binomial")
 summary(fit_log)
@@ -69,9 +68,12 @@ summary(fit_log)
 # compare our model with the model of Crommen, Van Keilegom (2022) directly.
 # However, we will compare the estimated survival curves.
 
+# Define initial values for the transformation parameters
 init.value.theta_1 <- 1
-init.value.theta_2 <- 2
-DataApplicationJPTA(data, init.value.theta_1, init.value.theta_2) # Takes about 1 minute to run
+init.value.theta_2 <- 1
+
+# Run the data application (takes about 1 minute to run)
+DataApplicationJPTA(data, init.value.theta_1, init.value.theta_2)
 
 # Goodness-of-fit test
 
