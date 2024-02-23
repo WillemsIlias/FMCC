@@ -18,10 +18,10 @@ library(survival)
 source("Functions_ad.r")
 
 # Select all white, married men who do not have children
-dataset = fulldata[(fulldata$children == 0 &
-                    fulldata$married  == 1 &
-                    fulldata$male     == 1 &
-                    fulldata$white    == 1), -c(1,4,5,7,8)]
+dataset = fulldata[(fulldata$children %in% c(0, 1) &
+                    fulldata$married  %in% c(1) &
+                    fulldata$male     %in% c(0) &
+                    fulldata$white    %in% c(0)), -c(1,4,5,7,8)]
 
 # Create vectors for the observed times and censoring indicators
 Y <- as.matrix(log(dataset$days))
@@ -73,7 +73,8 @@ init.value.theta_1 <- 1
 init.value.theta_2 <- 1
 
 # Run the data application (takes about 1 minute to run)
-DataApplicationJPTA(data, init.value.theta_1, init.value.theta_2)
+DataApplicationJPTA(data, init.value.theta_1, init.value.theta_2,
+                    multiple.starting.points = TRUE)
 
 # Goodness-of-fit test
 
@@ -83,6 +84,10 @@ source("Goodness of Fit/Goodness-of-fit-test_functions.R")
 # Reorder the colums in the dataset
 data_GOF <- dataset
 data_GOF <- as.matrix(data_GOF[,c(7, 5, 6, 8, 1:4)])
+
+# Log-transform the time variable
+data_GOF[, "days"] <- log(data_GOF[, "days"])
+colnames(data_GOF)[1] <- "log(days)"
 
 # Define the initial seed
 iseed <- 35497438

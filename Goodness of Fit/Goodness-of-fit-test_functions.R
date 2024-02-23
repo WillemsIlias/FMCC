@@ -114,11 +114,16 @@ dat.sim.reg.debug = function(n,par,iseed,Zbin,Wbin){
 # Functions bootstrap method
 #
 
-GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot) {
+GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot,
+                              multiple.starting.points = FALSE) {
+  
+  #### Input validation ####
   
   if ((Zbin != 1 && Zbin != 2) && (Wbin != 1 && Wbin !=2) ) {
-    stop("Invalid input")
+    stop("Invalid specification of Zbin and/or Wbin (can only be 1 or 2)")
   }
+  
+  #### Compute test statistic ####
   
   # Estimate the parameter vectors gamma and delta
   Y = data[,1]
@@ -142,16 +147,90 @@ GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot) {
   
   M = cbind(data[,4:(2+parl)],V)
   
-  init = c(rep(0,totparl), 1, 1, init.value.theta_1, init.value.theta_2)
-  parhat1 = nloptr(x0=c(init),eval_f=LikI,Y=Y,Delta=Delta,Xi=Xi,M=M,lb=c(rep(-Inf,totparl),1e-05,1e-5, 0,0),ub=c(rep(Inf,totparl),Inf,Inf, 2,2),
-                   eval_g_ineq=NULL,opts = list(algorithm = "NLOPT_LN_BOBYQA","ftol_abs"=1.0e-30,"maxeval"=100000,"xtol_abs"=rep(1.0e-30)))$solution
-  
-  
-  initd <-  c(parhat1[-length(parhat1)],parhat1[length(parhat1)-1],parhat1[length(parhat1)])
-  initd[length(initd) - 2] <- 0
-  
-  parhat = nloptr(x0=initd,eval_f=LikF,Y=Y,Delta=Delta,Xi=Xi,M=M,lb=c(rep(-Inf,totparl),1e-05,1e-5,-0.99,0,0),ub=c(rep(Inf,totparl),Inf,Inf,0.99,2,2),
-                  eval_g_ineq=NULL,opts = list(algorithm = "NLOPT_LN_BOBYQA","ftol_abs"=1.0e-30,"maxeval"=100000,"xtol_abs"=rep(1.0e-30)))$solution
+  # Maximization of the likelihood
+  if (multiple.starting.points) {
+    
+    # If multiple starting points should be used for the gradient descent
+    # algorithm...
+    
+    # Define starting values of the parameter vector
+    coef.starts <- c(-3, 0, 3)
+    theta.starts <- c(0.5, 1.5)
+    
+    par.starts <- list()
+    for (coef.idx in 1:totparl) {
+      for (coef.start in coef.starts) {
+        for (theta1.start in theta.starts) {
+          for (theta2.start in theta.starts) {
+            par.starts[[length(par.starts) + 1]] <-
+              c(coef.idx, coef.start, theta1.start, theta2.start)
+          }
+        }
+      }
+    }
+    
+    subset <- list(par.starts[[5]], par.starts[[6]], par.starts[[7]],
+                   par.starts[[8]])
+    par.starts <- subset
+    
+    # Initialize an object that will store all the parameter vectors
+    parhats.list <- list()
+    
+    # For each starting vector, run the optimization
+    for (par.start in par.starts) {
+      
+      # Define the initial parameter vector of this iteration
+      init = c(rep(0,totparl), 1, 1, init.value.theta_1, init.value.theta_2)
+      init[par.start[1]] <- par.start[2]
+      init[length(init) - 1] <- par.start[3]
+      init[length(init)] <- par.start[4]
+      
+      # Run the optimization
+      parhat1 = nloptr(x0=c(init),eval_f=LikI,Y=Y,Delta=Delta,Xi=Xi,M=M,lb=c(rep(-Inf,totparl),1e-05,1e-5, 0,0),ub=c(rep(Inf,totparl),Inf,Inf, 2,2),
+                       eval_g_ineq=NULL,opts = list(algorithm = "NLOPT_LN_BOBYQA","ftol_abs"=1.0e-30,"maxeval"=100000,"xtol_abs"=rep(1.0e-30)))$solution
+      
+      initd <-  c(parhat1[-length(parhat1)],parhat1[length(parhat1)-1],parhat1[length(parhat1)])
+      initd[length(initd) - 2] <- 0
+      
+      parhat = nloptr(x0=initd,eval_f=LikF,Y=Y,Delta=Delta,Xi=Xi,M=M,lb=c(rep(-Inf,totparl),1e-05,1e-5,-0.99,0,0),ub=c(rep(Inf,totparl),Inf,Inf,0.99,2,2),
+                      eval_g_ineq=NULL,opts = list(algorithm = "NLOPT_LN_BOBYQA","ftol_abs"=1.0e-30,"maxeval"=100000,"xtol_abs"=rep(1.0e-30)))$solution
+      
+      # Store the result
+      parhats.list[[length(parhats.list) + 1]] <- list(
+        init = init,
+        parhat = parhat
+      )
+    }
+    
+    # Find the parameter vector corresponding to the pseudo-global maximum of
+    # the likelihood function
+    # (note that LikF returns the negative of the log-likelihood)
+    min.lik <- Inf
+    parhat <- NULL
+    for (entry in parhats.list) {
+      lik.eval <- LikF(entry[[2]], Y, Delta, Xi, M)
+      if (min.lik > lik.eval) {
+        min.lik <- lik.eval
+        parhat <- entry[[2]]
+      }
+    }
+    
+  } else {
+    
+    # If only one starting point should be used for the gradient descent
+    # algorithm...
+    
+    init = c(rep(0,totparl), 1, 1, init.value.theta_1, init.value.theta_2)
+    parhat1 = nloptr(x0=c(init),eval_f=LikI,Y=Y,Delta=Delta,Xi=Xi,M=M,lb=c(rep(-Inf,totparl),1e-05,1e-5, 0,0),ub=c(rep(Inf,totparl),Inf,Inf, 2,2),
+                     eval_g_ineq=NULL,opts = list(algorithm = "NLOPT_LN_BOBYQA","ftol_abs"=1.0e-30,"maxeval"=100000,"xtol_abs"=rep(1.0e-30)))$solution
+    
+    initd <-  c(parhat1[-length(parhat1)],parhat1[length(parhat1)-1],parhat1[length(parhat1)])
+    initd[length(initd) - 2] <- 0
+    
+    parhat = nloptr(x0=initd,eval_f=LikF,Y=Y,Delta=Delta,Xi=Xi,M=M,lb=c(rep(-Inf,totparl),1e-05,1e-5,-0.99,0,0),ub=c(rep(Inf,totparl),Inf,Inf,0.99,2,2),
+                    eval_g_ineq=NULL,opts = list(algorithm = "NLOPT_LN_BOBYQA","ftol_abs"=1.0e-30,"maxeval"=100000,"xtol_abs"=rep(1.0e-30)))$solution
+    
+  }
   
   # Compute F_K(k; gamma, delta)
   
@@ -175,17 +254,20 @@ GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot) {
   # Order the values
   FK <- FK[order(FK)]
   
-  # Useful when computing the CM-statistic later on. In a sense, it can be seen to
-  # replace dF_K.
+  # Useful when computing the test statistic later on. In a sense, it can be
+  # seen to replace dF_K.
   w = rep(0,n)
   w[1] = FK[1]
   w[2:n] = FK[2:n]-FK[1:(n-1)]
   
-  # Also compute the cumulative distribution function based on KM-estimator
+  # Also compute the cumulative distribution function of K = min(T, C). Since
+  # the censoring variable A is independent of K, this can simply be done using
+  # a Kaplan-Meier estimator.
   K_delta <- as.numeric((Delta == 1) | (Xi == 1)) # Censoring indicator for K = min(T,C)
   surv_km <- survfit(Surv(Y, K_delta) ~ 1, type = "kaplan-meier")
   cdf_km <- 1 - get_surv_prob(surv_km, sort(Y))
   
+  # If necessary, display the results
   if (display.plot) {
     old.mfrow.setting <- par()$mfrow
     par(mfrow = c(1, 2))
@@ -196,8 +278,10 @@ GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot) {
            col = c("black", "red"), lty = 1)
   }
   
-  # Compute the Cramer - von Mises statistic
+  # Compute the appropriate test statistic
   TCM <- n*sum((cdf_km - FK)^2 * w)
+  
+  #### Compute the bootstrap distribution ####
   
   # In the following, an estimator of the distribution function of the adminis-
   # trative censoring times A will be useful.
@@ -243,14 +327,14 @@ GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot) {
     if (all(surv_A$surv == 1)) {
       A.star <- rep(Inf, n)
     } else {
-      A.star <- quantile(surv_A, probs = runif(n,1e-5,0.999999))$quantile
+      A.star <- quantile(surv_A, probs = runif(n, 1e-10, 1 - 1e-10))$quantile
       A.star <- as.numeric(A.star)
-      A.star[is.na(A.star)] <- max(Y) + 1
+      A.star[is.na(A.star)] <- Inf
     }
     
     Y.star = pmin(T.star,C.star,A.star)
-    Delta.star = as.numeric(Y.star==T.star)
-    Xi.star = ifelse(Y.star==T.star, 0, as.numeric(Y.star == C.star))
+    Delta.star = as.numeric(Y.star == T.star)
+    Xi.star = ifelse(Y.star == T.star, 0, as.numeric(Y.star == C.star))
     
     initd1 <- parhat
     parhat.star <- nloptr(x0=initd1,eval_f=LikF,Y=Y.star,Delta=Delta.star,Xi=Xi.star,M=M,lb=c(rep(-Inf,totparl),1e-05,1e-5,-0.99,0,0),
@@ -287,6 +371,8 @@ GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot) {
     n*sum((cdf_km.star - FK.star)^2 * w.star)
   } 
   
+  #### Extract, plot and return results ####
+  
   if (display.plot) {
     hist(TCMb_vector, main = "Histogram of bootstrap Cramer-Von Mises statistics",
          xlab = c(),
@@ -300,9 +386,10 @@ GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot) {
   significant1 <- (TCM > quantile(TCMb_vector, prob=0.9, na.rm = TRUE))
   significant2 <- (TCM > quantile(TCMb_vector, prob=0.95, na.rm = TRUE))
   significant3 <- (TCM > quantile(TCMb_vector, prob=0.80, na.rm = TRUE))
+  pvalue <- sum(TCM < TCMb_vector, na.rm = TRUE)/length(TCMb_vector)
   
   list(TCM = TCM, TCMb_vector = TCMb_vector, signif90 = significant1,
-       signif95 = significant2, signif80 = significant3)
+       signif95 = significant2, signif80 = significant3, pvalue = pvalue)
 }
 
 
