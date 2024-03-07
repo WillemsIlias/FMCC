@@ -271,10 +271,10 @@ GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot,
   if (display.plot) {
     old.mfrow.setting <- par()$mfrow
     par(mfrow = c(1, 2))
-    plot(sort(Y), FK, type = 'l', main = "Comparison of estimated model with KM",
+    plot(sort(Y), FK, type = 'l', main = "",
     xlab = "K = min(T,C)", ylab = "F(K)")
     lines(sort(Y), cdf_km, type = 's', col = "red")
-    legend("bottomright", legend = c("Estimated model", "Kaplan-Meier"),
+    legend("topleft", legend = c("Estimated model", "Kaplan-Meier"),
            col = c("black", "red"), lty = 1)
   }
   
@@ -374,8 +374,8 @@ GOF_test_parallel <- function(data, B, iseed, Zbin, Wbin, display.plot,
   #### Extract, plot and return results ####
   
   if (display.plot) {
-    hist(TCMb_vector, main = "Histogram of bootstrap Cramer-Von Mises statistics",
-         xlab = c(),
+    hist(TCMb_vector, main = "",
+         xlab = "Bootstrapped test statistics",
          xlim = c(0, max(max(TCMb_vector, na.rm = TRUE) + 0.1, TCM)))
     abline(v = TCM, col = "red")
     

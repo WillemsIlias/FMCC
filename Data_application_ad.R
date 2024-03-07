@@ -62,12 +62,6 @@ namescoef <- c("beta_{T,0}","beta_{T,1}","beta_{T,2}",
 fit_log <- glm(Delta ~ X[,2] + X[,3], family = "binomial")
 summary(fit_log)
 
-# We follow the approach as in Chapter 5 of Crommen, Van Keilegom (2022). Hence,
-# we will be comparing the models (1) assuming independence (2) assuming
-# dependence but no confounding and (3) our model. It would not make sense to
-# compare our model with the model of Crommen, Van Keilegom (2022) directly.
-# However, we will compare the estimated survival curves.
-
 # Define initial values for the transformation parameters
 init.value.theta_1 <- 1
 init.value.theta_2 <- 1
