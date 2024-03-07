@@ -122,6 +122,19 @@ LikGamma2 = function(par,Y,M){
   return(-Logn)
 }
 
+# likelihood gamma application
+LikGamma_BC = function(par,Y,M){ 
+  W=as.matrix(M)
+  gamma= as.matrix(par)
+  k=ncol(W)
+  tilde_W = W[,k]
+  Xandintercept = W[,-k]
+  tot = (plogis(Xandintercept%*%gamma)^Y)*((1-plogis(Xandintercept%*%gamma))^(tilde_W-Y))
+  p1 = pmax(tot,1e-100)
+  Logn = sum(log(p1)); 
+  return(-Logn)
+}
+
 ###########################################################
 # joint model with dependent censoring and transformation #
 ###########################################################
@@ -236,6 +249,46 @@ LikFG2 = function(par,Y,Delta,Xi,M){
   XandW=as.matrix(cbind(X,W))
   Vest=(1-Z)*((1+exp(XandW%*%gamma))*log(1+exp(XandW%*%gamma))-(XandW%*%gamma)*exp(XandW%*%gamma))-Z*((1+exp(-(XandW%*%gamma)))*log(1+exp(-(XandW%*%gamma)))+(XandW%*%gamma)*exp(-(XandW%*%gamma)))
   
+  transY.T=YJtrans(Y,theta_1)
+  DtransY.T=DYJtrans(Y,theta_1)
+  transY.C=YJtrans(Y,theta_2)
+  DtransY.C=DYJtrans(Y,theta_2)
+  
+  z1 = (transY.T-(X%*%beta+Z*alphaT+Vest*lambdaT))/sigma1
+  z2 = ((transY.C-rho*sigma2/sigma1*transY.T)-((X%*%eta+Z*alphaC+Vest*lambdaC)-rho*(sigma2/sigma1)*(X%*%beta+Z*alphaT+Vest*lambdaT)))/(sigma2*(1-rho^2)^0.5)
+  z3 = (transY.C-(X%*%eta+Z*alphaC+Vest*lambdaC))/sigma2
+  z4 = ((transY.T-rho*sigma1/sigma2*transY.C)-((X%*%beta+Z*alphaT+Vest*lambdaT)-rho*(sigma1/sigma2)*(X%*%eta+Z*alphaC+Vest*lambdaC)))/(sigma1*(1-rho^2)^0.5)
+  tot = (((1/sigma1)*dnorm(z1)*(1-pnorm(z2))*DtransY.T)^Delta)*(((1/sigma2)*dnorm(z3)*(1-pnorm(z4))*DtransY.C)^Xi)*((pbinorm(q1=-z1,q2=-z3,cov12=rho))^(1-(Delta+Xi))) # likelihood
+  p1 = pmax(tot,1e-100)   
+  Logn = sum(log(p1)); 
+  return(-Logn)
+}
+
+LikFG_BC= function(par,Y,Delta,Xi,M){ 
+  M=as.matrix(M)
+  k = ncol(M)-2
+  l = 2*(k+1)
+  v = k+3
+  beta = as.matrix(par[1:k])
+  alphaT = par[k+1]
+  lambdaT = par[k+2]
+  eta = as.matrix(par[v:l])
+  alphaC = par[l+1]
+  lambdaC = par[l+2]
+  sigma1 = par[l+3]
+  sigma2 = par[l+4]
+  rho = par[l+5]
+  theta_1 = par[l+6]
+  theta_2 = par[l+7]
+  gamma = as.matrix(par[(l+8):(l+7+parlgamma)])
+  
+  X=as.matrix(M[,1:k])
+  Z=as.matrix(M[,k+1])
+  W=M[,k+2]
+  XandW=as.matrix(cbind(X,W))
+  
+  Vest <-(W-Z)*((1+exp(X%*%gamma))*log(1+exp(X%*%gamma))-(X%*%gamma)*exp(X%*%gamma))-Z*((1+exp(-(X%*%gamma)))*log(1+exp(-(X%*%gamma)))+(X%*%gamma)*exp(-(X%*%gamma)))
+ 
   transY.T=YJtrans(Y,theta_1)
   DtransY.T=DYJtrans(Y,theta_1)
   transY.C=YJtrans(Y,theta_2)
@@ -375,6 +428,46 @@ LikIGamma2 = function(par,Y,Delta,Xi,M){
   Logn = sum(log(p1)); 
   return(-Logn)
 }
+
+
+
+LikIGamma_BC = function(par,Y,Delta,Xi,M){ 
+  M=as.matrix(M)
+  k = ncol(M)-2
+  l = 2*(k+1)
+  v = k+3
+  beta = as.matrix(par[1:k])
+  alphaT = par[k+1]
+  lambdaT = par[k+2]
+  eta = as.matrix(par[v:l])
+  alphaC = par[l+1]
+  lambdaC = par[l+2]
+  sigma1 = par[l+3]
+  sigma2 = par[l+4]
+  theta_1 = par[l+5]
+  theta_2 = par[l+6]
+  gamma = as.matrix(par[(l+7):(l+6+parlgamma)])
+  
+  X=as.matrix(M[,1:k])
+  Z=as.matrix(M[,k+1])
+  W=as.matrix(M[,k+2])
+  XandW=as.matrix(cbind(X,W))
+  Vest <-(W-Z)*((1+exp(X%*%gamma))*log(1+exp(X%*%gamma))-(X%*%gamma)*exp(X%*%gamma))-Z*((1+exp(-(X%*%gamma)))*log(1+exp(-(X%*%gamma)))+(X%*%gamma)*exp(-(X%*%gamma)))
+  
+  transY.T=YJtrans(Y,theta_1)
+  DtransY.T=DYJtrans(Y,theta_1)
+  transY.C=YJtrans(Y,theta_2)
+  DtransY.C=DYJtrans(Y,theta_2)
+  
+  z1 = (transY.T-(X%*%beta+Z*alphaT+Vest*lambdaT))/sigma1
+  z2 = (transY.C-(X%*%eta+Z*alphaC+Vest*lambdaC))/sigma2
+  
+  tot = (((1/sigma1)*dnorm(z1)*(1-pnorm(z2))*DtransY.T)^Delta)*(((1/sigma2)*dnorm(z2)*(1-pnorm(z1))*DtransY.C)^Xi)*((pbinorm(q1=-z1,q2=-z2,cov12=0))^(1-(Delta+Xi)))
+  p1 = pmax(tot,1e-100)
+  Logn = sum(log(p1)); 
+  return(-Logn)
+}
+
 
 
 ######################## simulation function ###################################
@@ -3906,22 +3999,24 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   
   # Remove this once the two "stop()" functions are resolved (somewhere around
   # code lines 4097 and 4246)
-  stop("Make sure all stops are removed from this code before fully running it")
+  #stop("Make sure all stops are removed from this code before fully running it")
   
   # Extract the parameters
   n = nrow(data)
   Y = data[, 1]
   Delta = data[, 2]
   Xi = data[, 3]
+  intercept = data[,4]
   X = data[,(5:(parl + 1))]
   Z = data[,parl+2]
   W = data[,parl+3]
   XandW = as.matrix(cbind(data[,4],X,W))
+  Xandintercept = cbind(intercept,X)
   
   # Estimate V
-  gammaest <- nloptr(x0=rep(0,parlgamma),eval_f=LikGamma2,Y=Z,M=XandW,lb=c(rep(-Inf,parlgamma)),ub=c(rep(Inf,parlgamma)),
+  gammaest <- nloptr(x0=rep(0,parlgamma),eval_f=LikGamma_BC,Y=Z,M=XandW,lb=c(rep(-Inf,parlgamma)),ub=c(rep(Inf,parlgamma)),
                      eval_g_ineq=NULL,opts = list(algorithm = "NLOPT_LN_BOBYQA","ftol_abs"=1.0e-30,"maxeval"=100000,"xtol_abs"=rep(1.0e-30)))$solution
-  V <- (1-Z)*((1+exp(XandW%*%gammaest))*log(1+exp(XandW%*%gammaest))-(XandW%*%gammaest)*exp(XandW%*%gammaest))-Z*((1+exp(-(XandW%*%gammaest)))*log(1+exp(-(XandW%*%gammaest)))+(XandW%*%gammaest)*exp(-(XandW%*%gammaest)))
+  V <- (W-Z)*((1+exp(Xandintercept%*%gammaest))*log(1+exp(Xandintercept%*%gammaest))-(Xandintercept%*%gammaest)*exp(Xandintercept%*%gammaest))-Z*((1+exp(-(Xandintercept%*%gammaest)))*log(1+exp(-(Xandintercept%*%gammaest)))+(Xandintercept%*%gammaest)*exp(-(Xandintercept%*%gammaest)))
   
   # Create matrix of X, Z and V.
   M <- cbind(data[,4:(2+parl)],V)
@@ -4044,7 +4139,7 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   # [20:25] : gamma
   parhatG = c(parhat,as.vector(gammaest))
   
-  Hgamma = hessian(LikFG2,parhatG,Y=Y,Delta=Delta,Xi=Xi,M=MnoV,method="Richardson",method.args=list(eps=1e-4, d=0.0001, zer.tol=sqrt(.Machine$double.eps/7e-7), r=10, v=2, show.details=FALSE)) 
+  Hgamma = hessian(LikFG_BC,parhatG,Y=Y,Delta=Delta,Xi=Xi,M=MnoV,method="Richardson",method.args=list(eps=1e-4, d=0.0001, zer.tol=sqrt(.Machine$double.eps/7e-7), r=10, v=2, show.details=FALSE)) 
   
   # Select part of variance matrix pertaining to beta, eta, var1, var2, rho and theta
   # (i.e. H_delta).
@@ -4058,25 +4153,23 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   for (i in 1:parlgamma) {
     for (j in 2:parlgamma) {
       if (i<=j){
-        prodvec<-cbind(prodvec,diag(XandW[,i]%*%t(XandW[,j])))
+        prodvec<-cbind(prodvec,diag(Xandintercept[,i]%*%t(Xandintercept[,j])))
       }
     }
   }
   
-  secder=t(-dlogis(XandW%*%gammaest))%*%prodvec
+  secder=t(-dlogis(Xandintercept%*%gammaest))%*%prodvec
   
   WM = secder[1:parlgamma]
-  WM<-rbind(WM, secder[c(2,4,5)])
-  WM<-rbind(WM, secder[c(3,5,6)])
-  
+  WM <- rbind(WM, secder[c(2,3)])
   WMI = ginv(WM)
   
-  diffvec = Z-plogis(XandW%*%gammaest)
+  diffvec = Z-plogis(Xandintercept%*%gammaest)*W
   
   mi = c()
   
   for(i in 1:n){
-    newrow<-diffvec[i,]%*%XandW[i,]
+    newrow<-diffvec[i,]%*%Xandintercept[i,]
     mi = rbind(mi,newrow)
   }
   
@@ -4085,7 +4178,7 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   gi = c()
   
   # For debugging
-  stop("Check whether this should be M[i,] or t(M[i,]) below")
+  #stop("Check whether this should be M[i,] or t(M[i,]) below")
   # In de LikF functie worden de kolommen van M[i,] geteld om de waarde van k
   # te bepalen. Als we dus bv. verkeerdelijk t(M[i,]) meegeven ipv M[i,], dan
   # is k = 1 in plaats van k = (iets anders). Bijgevolg worden dan de verkeerde
@@ -4095,7 +4188,7 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   # toen ik de code runde met mijn dummy data set ging het wel mis...
   
   for (i in 1:n) {
-    J1 = jacobian(LikF,parhat,Y=Y[i],Delta=Delta[i],Xi=Xi[i],M=M[i,],method="Richardson",method.args=list(eps=1e-4, d=0.0001, zer.tol=sqrt(.Machine$double.eps/7e-7), r=6, v=2, show.details=FALSE))
+    J1 = jacobian(LikF,parhat,Y=Y[i],Delta=Delta[i],Xi=Xi[i],M=t(M[i,]),method="Richardson",method.args=list(eps=1e-4, d=0.0001, zer.tol=sqrt(.Machine$double.eps/7e-7), r=6, v=2, show.details=FALSE))
     gi = rbind(gi,c(J1))
   }
   
@@ -4233,7 +4326,7 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   
   parhatGI = c(parhat1,as.vector(gammaest))
   
-  HgammaI = hessian(LikIGamma2,parhatGI,Y=Y,Delta=Delta,Xi=Xi,M=MnoV,method="Richardson",method.args=list(eps=1e-4, d=0.0001, zer.tol=sqrt(.Machine$double.eps/7e-7), r=6, v=2, show.details=FALSE)) 
+  HgammaI = hessian(LikIGamma_BC,parhatGI,Y=Y,Delta=Delta,Xi=Xi,M=MnoV,method="Richardson",method.args=list(eps=1e-4, d=0.0001, zer.tol=sqrt(.Machine$double.eps/7e-7), r=6, v=2, show.details=FALSE)) 
   
   HInd = HgammaI[1:(length(initd)-1),1:(length(initd)-1)]
   HIInd = ginv(HInd)
@@ -4243,11 +4336,11 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   giI = c()
   
   # For debugging
-  stop("Check whether this should be M[i,] or t(M[i,])")
+  #stop("Check whether this should be M[i,] or t(M[i,])")
   # Zelfde opmerking als voordien.
   
   for (i in 1:n) {
-    J1I = jacobian(LikI,parhat1,Y=Y[i],Delta=Delta[i],Xi=Xi[i],M=M[i,],method="Richardson",method.args=list(eps=1e-4, d=0.0001, zer.tol=sqrt(.Machine$double.eps/7e-7), r=6, v=2, show.details=FALSE))
+    J1I = jacobian(LikI,parhat1,Y=Y[i],Delta=Delta[i],Xi=Xi[i],M=t(M[i,]),method="Richardson",method.args=list(eps=1e-4, d=0.0001, zer.tol=sqrt(.Machine$double.eps/7e-7), r=6, v=2, show.details=FALSE))
     giI = rbind(giI,c(J1I))
   }
   
@@ -4368,7 +4461,7 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   #   invited_to_study(no=0, yes = 1))
   
   # XandW variables: (intercept, age, invited_to_study(no=0, yes = 1))
-  dd <- c(1, 40, 1)
+  dd <- c(1, -1.63, 1)
   
   # Z variable: participated_in_study(no=0, otherwise=1)
   Zobs <- 1
@@ -4380,7 +4473,7 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   s1 <- parhat[totparl + 1]
   gamma <- parhatG[(length(parhat)+1):length(parhatG)]
   
-  V.obs <- (1-Zobs)*((1+exp(dd%*%gamma))*log(1+exp(dd%*%gamma))-(dd%*%gamma)*exp(dd%*%gamma))-Zobs*((1+exp(-(dd%*%gamma)))*log(1+exp(-(dd%*%gamma)))+(dd%*%gamma)*exp(-(dd%*%gamma))) #control function
+  V.obs <- (dd[3]-Zobs)*((1+exp(dd[-3]%*%gamma))*log(1+exp(dd[-3]%*%gamma))-(dd[-3]%*%gamma)*exp(dd[-3]%*%gamma))-Zobs*((1+exp(-(dd[-3]%*%gamma)))*log(1+exp(-(dd[-3]%*%gamma)))+(dd[-3]%*%gamma)*exp(-(dd[-3]%*%gamma))) #control function
   dd.2 <- c(dd[-length(dd)],Zobs,V.obs) #X,Z,V
   
   Time <- sort(exp(Y))
@@ -4461,7 +4554,7 @@ DataApplicationBC <- function(data, init.value.theta_1, init.value.theta_2,
   print(paste("Transformation: ",exp(IYJtrans(qnorm(0.5)*s1+t(parhat[1:length(dd.2)]) %*% dd.2,theta))))
   
   plot(Time, S, type = 'l', col = 1, xlab = "Time (t)", ylab = "S(t)",
-       xlim = c(0, 365))
+       xlim = c(0, max(Time)), ylim=c(0.96,1))
   lines(Time, S_noTransform, type = 'l', col = 1, lty=3)
   
   # Add legend

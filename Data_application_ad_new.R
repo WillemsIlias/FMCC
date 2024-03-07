@@ -43,7 +43,7 @@ namescoef <- c("beta_{T1,0}","beta_{T1,1}", "alpha_{T1}","lambda_{T1}",
 # Define some useful variables
 parl <- ncol(X) + 2
 totparl <- 2*parl
-parlgamma <- parl - 1
+parlgamma <- parl - 2
 n <- nrow(data)
 
 # Define initial values for the transformation parameters
