@@ -5,7 +5,7 @@
 rm(list = ls())
 
 # Load necessary packages, functions and data
-fulldata<-read.csv("Data/clean_dataset_JTPA_ad.csv")
+fulldata<-read.csv("Data/clean_dataset_JTPA.csv")
 library(MASS)
 library(nloptr)
 library(numDeriv)
@@ -16,17 +16,18 @@ library(foreach)
 library(pbivnorm)
 library(survival)
 source("Functions_ad.r")
+source("Goodness of Fit/Goodness-of-fit-test_functions.R")
 
 # Select all white, married men who do not have children
-dataset = fulldata[(fulldata$children %in% c(0, 1) &
+dataset = fulldata[(fulldata$children %in% c(0) &
                     fulldata$married  %in% c(1) &
-                    fulldata$male     %in% c(0) &
-                    fulldata$white    %in% c(0)), -c(1,4,5,7,8)]
+                    fulldata$male     %in% c(1) &
+                    fulldata$white    %in% c(1)), -c(1,4,5,7,8)]
 
 # Create vectors for the observed times and censoring indicators
 Y <- as.matrix(log(dataset$days))
 Delta <- as.matrix(dataset$delta)
-Xi <- as.matrix(dataset$xi)
+Xi <- 1 - Delta
 
 # Create a vector that represents the intercept
 dataset$intercept <- rep(1,nrow(dataset))
@@ -53,6 +54,7 @@ W <- as.matrix(dataset$treatment)
 # Create data matrix
 XandW <- as.matrix(cbind(X,W))
 data <- as.matrix(cbind(Y, Delta, Xi, X, Z, W))
+colnames(data) <- c("log(time)", "Delta", "Xi", "intercept", "age", "hsged", "jtpa", "treatment")
 namescoef <- c("beta_{T,0}","beta_{T,1}","beta_{T,2}",
                "alpha_T","lambda_T","beta_{C,0}","beta_{C,1}","beta_{C,2}",
                "alpha_C","lambda_C","sigma_T",
@@ -72,16 +74,8 @@ DataApplicationJPTA(data, init.value.theta_1, init.value.theta_2,
 
 # Goodness-of-fit test
 
-# Load GOF test functions
-source("Goodness of Fit/Goodness-of-fit-test_functions.R")
-
 # Reorder the colums in the dataset
-data_GOF <- dataset
-data_GOF <- as.matrix(data_GOF[,c(7, 5, 6, 8, 1:4)])
-
-# Log-transform the time variable
-data_GOF[, "days"] <- log(data_GOF[, "days"])
-colnames(data_GOF)[1] <- "log(days)"
+data_GOF <- as.matrix(data)
 
 # Define the initial seed
 iseed <- 35497438
